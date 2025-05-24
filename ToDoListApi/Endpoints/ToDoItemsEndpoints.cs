@@ -16,62 +16,75 @@ namespace ToDoListApi.Endpoints
 
         public static void RegisterToDoItemEndpoints(this WebApplication app)
         {
-            app.MapGet("/todoitems", () => {
-                return TypedResults.Ok(todoItems);
-                });
+            var todoItemsGroup = app.MapGroup("/todoitems");
 
-            app.MapGet("/todoitems/{id}", Results<Ok<ToDoItem>, NotFound>(int id) =>
-            {
-                ToDoItem? item = todoItems.Find(item => item.Id == id);
+            todoItemsGroup.MapGet("/", GetAllToDoItems);
 
-                if(item != null)
-                {
-                    return TypedResults.Ok(item);
-                }
-                else
-                {
-                    return TypedResults.NotFound();
-                }
-            })
+            todoItemsGroup.MapGet("/{id}", GetToDoItemById)
             .WithName("GetTodoItemById");
 
-            app.MapPost("/todoitems", ([FromBody] ToDoItem item) =>
-            {
-                item.Id = todoItems.Max(item => item.Id) + 1;
-                item.IsDone = false;
-                todoItems.Add(item);
-                return TypedResults.CreatedAtRoute(item, "GetTodoItemById", new { id = item.Id });
-            });
+            todoItemsGroup.MapPost("/", CreateToDoItem);
 
-            app.MapPut("/todoitems/{id}", Results<NoContent, NotFound>(int id, [FromBody] ToDoItem updatedItem) =>
-            {
-                ToDoItem? existingItem = todoItems.Find(item => item.Id == id);
-                if (existingItem != null)
-                {
-                    existingItem.Title = updatedItem.Title;
-                    existingItem.IsDone = updatedItem.IsDone;
-                    existingItem.DueDate = updatedItem.DueDate;
-                    return TypedResults.NoContent();
-                }
-                else
-                {
-                    return TypedResults.NotFound();
-                }
-            });
+            todoItemsGroup.MapPut("/{id}", UpdateToDoItem);
 
-            app.MapDelete("/todoitems/{id}", Results<NoContent, NotFound>(int id) =>
+            todoItemsGroup.MapDelete("/todoitems/{id}", DeleteToDoItem);
+        }
+
+        public static Ok<List<ToDoItem>> GetAllToDoItems()
+        {
+            return TypedResults.Ok(todoItems);
+        }
+
+        public static Results<Ok<ToDoItem>, NotFound> GetToDoItemById(int id)
+        {
+            ToDoItem? item = todoItems.Find(item => item.Id == id);
+
+            if(item != null)
             {
-                int index = todoItems.FindIndex(item => item.Id == id);
-                if(index != -1)
-                {
-                    todoItems.RemoveAt(index);
-                    return TypedResults.NoContent();
-                }
-                else
-                {
-                    return TypedResults.NotFound();
-                }
-            });
+                return TypedResults.Ok(item);
+            }
+            else
+            {
+                return TypedResults.NotFound();
+            }
+        }
+
+        public static CreatedAtRoute<ToDoItem> CreateToDoItem([FromBody] ToDoItem item)
+        {
+            item.Id = todoItems.Max(item => item.Id) + 1;
+            item.IsDone = false;
+            todoItems.Add(item);
+            return TypedResults.CreatedAtRoute(item, "GetTodoItemById", new { id = item.Id});
+        }
+
+        public static Results<NoContent, NotFound> UpdateToDoItem(int id, [FromBody] ToDoItem updatedItem)
+        {
+            ToDoItem? existingItem = todoItems.Find(item => item.Id == id);
+            if (existingItem != null)
+            {
+                existingItem.Title = updatedItem.Title;
+                existingItem.IsDone = updatedItem.IsDone;
+                existingItem.DueDate = updatedItem.DueDate;
+                return TypedResults.NoContent();
+            }
+            else
+            {
+                return TypedResults.NotFound();
+            }
+        }
+
+        public static Results<NoContent, NotFound> DeleteToDoItem(int id)
+        {
+            int index = todoItems.FindIndex(item => item.Id == id);
+            if (index != -1)
+            {
+                todoItems.RemoveAt(index);
+                return TypedResults.NoContent();
+            }
+            else
+            {
+                return TypedResults.NotFound();
+            }
         }
     }
 }
